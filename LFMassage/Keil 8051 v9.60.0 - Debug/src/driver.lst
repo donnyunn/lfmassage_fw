@@ -1,0 +1,181 @@
+C51 COMPILER V9.60.0.0   DRIVER                                                            10/14/2021 10:03:13 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE DRIVER
+OBJECT MODULE PLACED IN .\src\driver.OBJ
+COMPILER INVOKED BY: C:\SiliconLabs\SimplicityStudio\v5\developer\toolchains\keil_8051\9.60\BIN\C51.exe C:\Users\donny\S
+                    -implicityStudio\v5_workspace\LFMassage\src\driver.c OMF2 SMALL DEBUG OBJECTEXTEND ROM(LARGE) WARNINGLEVEL(2) FLOATFUZZY(
+                    -3) OPTIMIZE(8,SPEED) DEFINE(DEBUG=1) INTVECTOR(0X0000) INTPROMOTE INCDIR(C:\Users\donny\SimplicityStudio\v5_workspace\LF
+                    -Massage\inc;C:/SiliconLabs/SimplicityStudio/v5/developer/sdks/8051/v4.2.1//Device/shared/si8051Base;C:/SiliconLabs/Simpl
+                    -icityStudio/v5/developer/sdks/8051/v4.2.1//Device/EFM8BB1/inc) PRINT(.\src\driver.lst) COND PAGEWIDTH(120) PAGELENGTH(65
+                    -) OBJECT(.\src\driver.OBJ)
+
+line level    source
+
+   1          /*
+   2           * driver.c
+   3           *
+   4           *  Created on: 2021. 10. 12.
+   5           *      Author: donny
+   6           */
+   7          #include <SI_EFM8BB1_Register_Enums.h>
+   8          #include "driver.h"
+   9          
+  10          SI_SBIT(LEDR, SFR_P0, 3);
+  11          SI_SBIT(LEDG, SFR_P0, 4);
+  12          SI_SBIT(LEDB, SFR_P0, 5);
+  13          SI_SBIT(IRLED, SFR_P0, 6);
+  14          SI_SBIT(BUZZ, SFR_P0, 7);
+  15          SI_SBIT(SWNEG, SFR_P1, 0);
+  16          SI_SBIT(SWPOS, SFR_P1, 1);
+  17          SI_SBIT(SW, SFR_P1, 2);
+  18          
+  19          bool btn_plus = false;
+  20          bool btn_mode = false;
+  21          bool btn_minus = false;
+  22          
+  23          uint32_t sens_mv;
+  24          bool sensing = false;
+  25          
+  26          void setBtnPlus(bool pressed)
+  27          {
+  28   1        btn_plus = pressed;
+  29   1      }
+  30          
+  31          void setBtnMode(bool pressed)
+  32          {
+  33   1        btn_mode = pressed;
+  34   1      }
+  35          
+  36          void setBtnMinus(bool pressed)
+  37          {
+  38   1        btn_minus = pressed;
+  39   1      }
+  40          
+  41          bool getBtnPlus(void)
+  42          {
+  43   1        return btn_plus;
+  44   1      }
+  45          
+  46          bool getBtnMode(void)
+  47          {
+  48   1        return btn_mode;
+  49   1      }
+  50          
+  51          bool getBtnMinus(void)
+C51 COMPILER V9.60.0.0   DRIVER                                                            10/14/2021 10:03:13 PAGE 2   
+
+  52          {
+  53   1        return btn_minus;
+  54   1      }
+  55          
+  56          void setLedRed(bool on)
+  57          {
+  58   1        LEDR = !on;
+  59   1      }
+  60          
+  61          void setLedGrn(bool on)
+  62          {
+  63   1        LEDG = !on;
+  64   1      }
+  65          
+  66          void setLedBlu(bool on)
+  67          {
+  68   1        LEDB = !on;
+  69   1      }
+  70          
+  71          void setIrLed(bool on)
+  72          {
+  73   1        IRLED = !on;
+  74   1      }
+  75          
+  76          void toggleBuzz(void)
+  77          {
+  78   1        BUZZ = !BUZZ;
+  79   1      }
+  80          
+  81          void offBuzz(void)
+  82          {
+  83   1        BUZZ = 0;
+  84   1      }
+  85          
+  86          void toggleSwitch(void)
+  87          {
+  88   1        SW = !SW;
+  89   1      }
+  90          
+  91          void offSwitch(void)
+  92          {
+  93   1        SW = 0;
+  94   1        SWPOS = 0;
+  95   1        SWNEG = 0;
+  96   1      }
+  97          
+  98          void pulseNeg(int width)
+  99          {
+ 100   1        int i;
+ 101   1        SWPOS = 1;
+ 102   1        SWNEG = 1;
+ 103   1        for (i = 0; i < width; i++) {
+ 104   2            NOP();
+ 105   2        }
+ 106   1        SWPOS = 0;
+ 107   1        SWNEG = 0;
+ 108   1      }
+ 109          
+ 110          void pulsePos(int width)
+ 111          {
+ 112   1        int i;
+ 113   1        SWNEG = 0;
+ 114   1        SWPOS = 1;
+C51 COMPILER V9.60.0.0   DRIVER                                                            10/14/2021 10:03:13 PAGE 3   
+
+ 115   1        for (i = 0; i < width; i++) {
+ 116   2            NOP();
+ 117   2        }
+ 118   1        SWPOS = 0;
+ 119   1      }
+ 120          
+ 121          void charge(uint32_t mv)
+ 122          {
+ 123   1        int i;
+ 124   1        while(getSens() < mv) {
+ 125   2            WDTCN = 0xA5;
+ 126   2        }
+ 127   1        SW = 0;
+ 128   1      }
+*** WARNING C280 IN LINE 123 OF C:\Users\donny\SimplicityStudio\v5_workspace\LFMassage\src\driver.c: 'i': unreferenced l
+             -ocal variable
+ 129          
+ 130          uint32_t getSens(void)
+ 131          {
+ 132   1        sensing = true;
+ 133   1        TMR2CN0_TR2 = 1;
+ 134   1        while (sensing);
+ 135   1        TMR2CN0_TR2 = 0;
+ 136   1        return sens_mv;
+ 137   1      }
+ 138          
+ 139          void driver_updateSens(uint32_t mV)
+ 140          {
+ 141   1        sens_mv = mV;
+ 142   1        sensing = false;
+ 143   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    190    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4       6
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      4       7
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)
