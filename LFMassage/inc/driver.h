@@ -24,9 +24,11 @@ void toggleSwitch(void);
 void offSwitch(void);
 void pulseNeg(int width);
 void pulsePos(int width);
+void pulseBoth(int width);
 void charge(uint32_t mv);
 
 uint32_t getSens(void);
+void driver_make_shock(int pw, uint32_t amp);
 void driver_updateSens(uint32_t mV);
 
 #endif /* INC_DRIVER_H_ */

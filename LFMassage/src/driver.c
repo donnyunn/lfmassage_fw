@@ -23,6 +23,16 @@ bool btn_minus = false;
 uint32_t sens_mv;
 bool sensing = false;
 
+void delay(int val)
+{
+  int i, j;
+  for (i = val; i != 0; i--) {
+      for (j = 0; j < 10000; j++) {
+          NOP();
+      }
+  }
+}
+
 void setBtnPlus(bool pressed)
 {
   btn_plus = pressed;
@@ -98,19 +108,16 @@ void offSwitch(void)
 void pulseNeg(int width)
 {
   int i;
-  SWPOS = 1;
   SWNEG = 1;
   for (i = 0; i < width; i++) {
       NOP();
   }
-  SWPOS = 0;
   SWNEG = 0;
 }
 
 void pulsePos(int width)
 {
   int i;
-  SWNEG = 0;
   SWPOS = 1;
   for (i = 0; i < width; i++) {
       NOP();
@@ -118,9 +125,18 @@ void pulsePos(int width)
   SWPOS = 0;
 }
 
-void charge(uint32_t mv)
+void pulseBoth(int width)
 {
   int i;
+  SWPOS = 1;
+  SWNEG = 1;
+  for (i = 0; i < width; i++) NOP();
+  SWPOS = 0;
+  SWNEG = 0;
+}
+
+void charge(uint32_t mv)
+{
   while(getSens() < mv) {
       WDTCN = 0xA5;
   }
@@ -134,6 +150,16 @@ uint32_t getSens(void)
   while (sensing);
   TMR2CN0_TR2 = 0;
   return sens_mv;
+}
+
+void driver_make_shock(int pw, uint32_t amp)
+{
+  TMR2CN0_TR2 = 1;
+  pulsePos(pw);
+  NOP();
+  pulseNeg(pw);
+  charge(amp);
+  TMR2CN0_TR2 = 0;
 }
 
 void driver_updateSens(uint32_t mV)

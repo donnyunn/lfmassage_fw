@@ -495,10 +495,9 @@ CMP_0_enter_DefaultMode_from_RESET (void)
 
   // $[CMP0MD - Comparator 0 Mode]
   /***********************************************************************
-   - Mode 3 
    - Comparator rising-edge interrupt enabled
    ***********************************************************************/
-  CMP0MD |= CMP0MD_CPMD__MODE3 | CMP0MD_CPRIE__RISE_INT_ENABLED;
+  CMP0MD |= CMP0MD_CPRIE__RISE_INT_ENABLED;
   // [CMP0MD - Comparator 0 Mode]$
 
   // $[CMP0CN0 - Comparator 0 Control 0]

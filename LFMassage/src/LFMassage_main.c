@@ -19,7 +19,11 @@
 
 void initialize(void);
 void enter_lowpower(void);
+void work_red(void);
+void work_grn(void);
+void work_blu(void);
 void beep(void);
+void check_LongPush(void);
 void Timer0_Delay (uint16_t us);
 
 typedef enum {
@@ -39,9 +43,11 @@ typedef enum {
   MAG_MAX
 } magnitude_t;
 
-mode_t mode = MODE_BLU;
+mode_t mode = MODE_READY;
 magnitude_t mag = MAG_0;
 static uint32_t chrg_ref_mV = 100;
+int exeCnt = 0;
+int btnCnt = 0;
 
 //-----------------------------------------------------------------------------
 // SiLabs_Startup() Routine
@@ -80,34 +86,34 @@ int main (void)
 
   while (1) 
   {
-      WDTCN = 0xA5;
     // $[Generated Run-time code]
     // [Generated Run-time code]$
+      /* Main Work */
+      WDTCN = 0xA5;
       switch (mode) {
         case MODE_READY:
           break;
         case MODE_RED:
-          TMR2CN0_TR2 = 1;
-          pulseNeg(100);
-          Timer0_Delay(100);
-          pulseNeg(100);
-          Timer0_Delay(100);
-          TMR2CN0_TR2 = 0;
-          Timer0_Delay(2000);
+          work_red();
           break;
         case MODE_GRN:
+          work_grn();
           break;
         case MODE_BLU:
+          work_blu();
           break;
       }
 
+      /* Button Event */
       if (getBtnMode()) {
           setBtnMode(false);
+
           beep();
 
-          mode++;
-          if (mode == MODE_MAX) mode = MODE_READY;
+          exeCnt = 0;
 
+          mode++;
+          if (mode == MODE_MAX) mode = MODE_RED;
           switch (mode) {
             case MODE_READY:
               setLedRed(false);
@@ -141,32 +147,35 @@ int main (void)
           beep();
       } else if (getBtnPlus()) {
           setBtnPlus(false);
-          mag++;
-          if (mag == MAG_MAX) mag--;
-          switch (mag) {
-            case MAG_0: chrg_ref_mV = 100; break;
-            case MAG_1: chrg_ref_mV = 300; break;
-            case MAG_2: chrg_ref_mV = 500; break;
-            case MAG_3: chrg_ref_mV = 700; break;
-            case MAG_4: chrg_ref_mV = 900; break;
-            case MAG_5: chrg_ref_mV = 1100; break;
+          if (mag < MAG_5) {
+              mag++;
+              beep();
           }
-
-          beep();
+          switch (mag) {
+            case MAG_0: chrg_ref_mV = 0; break;
+            case MAG_1: chrg_ref_mV = 100; break;
+            case MAG_2: chrg_ref_mV = 200; break;
+            case MAG_3: chrg_ref_mV = 400; break;
+            case MAG_4: chrg_ref_mV = 800; break;
+            case MAG_5: chrg_ref_mV = 1600; break;
+          }
       } else if (getBtnMinus()) {
           setBtnMinus(false);
-          if (mag != MAG_0) mag--;
-          switch (mag) {
-            case MAG_0: chrg_ref_mV = 100; break;
-            case MAG_1: chrg_ref_mV = 300; break;
-            case MAG_2: chrg_ref_mV = 500; break;
-            case MAG_3: chrg_ref_mV = 700; break;
-            case MAG_4: chrg_ref_mV = 900; break;
-            case MAG_5: chrg_ref_mV = 1100; break;
+          if (mag > MAG_0) {
+              mag--;
+              beep();
           }
-
-          beep();
+          switch (mag) {
+            case MAG_0: chrg_ref_mV = 0; break;
+            case MAG_1: chrg_ref_mV = 100; break;
+            case MAG_2: chrg_ref_mV = 200; break;
+            case MAG_3: chrg_ref_mV = 400; break;
+            case MAG_4: chrg_ref_mV = 800; break;
+            case MAG_5: chrg_ref_mV = 1600; break;
+          }
       }
+
+      check_LongPush();
   }                             
 }
 
@@ -195,12 +204,70 @@ void enter_lowpower(void)
 //  PCON0 = PCON0_IDLE__IDLE;
 }
 
+void work_red(void)
+{
+  if (exeCnt < 45) {
+      if (mag != MAG_0) {
+          driver_make_shock(10, chrg_ref_mV);
+      }
+  } else if (exeCnt < 50) {
+      Timer0_Delay(500);
+  } else {
+      exeCnt = 0;
+  }
+  exeCnt++;
+}
+
+void work_grn(void)
+{
+  if (exeCnt < 45) {
+      driver_make_shock(100,chrg_ref_mV);
+  } else if (exeCnt < 50) {
+      Timer0_Delay(500);
+  } else {
+      exeCnt = 0;
+  }
+  exeCnt++;
+}
+
+void work_blu(void)
+{
+  if (exeCnt < 45) {
+        driver_make_shock(200,chrg_ref_mV);
+    } else if (exeCnt < 50) {
+        Timer0_Delay(500);
+    } else {
+        exeCnt = 0;
+    }
+    exeCnt++;
+}
+
 void beep(void)
 {
   TMR3CN0 |= TMR3CN0_TR3__RUN;
   Timer0_Delay(200);
   TMR3CN0 &= ~TMR3CN0_TR3__RUN;
   offBuzz();
+}
+
+void check_LongPush(void)
+{
+  if ((CMP0CN0 & CMP0CN0_CPOUT__POS_GREATER_THAN_NEG) != 0) {
+      if (++btnCnt > 50) {
+          setLedRed(false);
+          setLedGrn(false);
+          setLedBlu(false);
+          setIrLed(false);
+
+          beep();
+          beep();
+          beep();
+
+          enter_lowpower();
+      }
+  } else {
+      btnCnt = 0;
+  }
 }
 
 void Timer0_Delay (uint16_t ms)
