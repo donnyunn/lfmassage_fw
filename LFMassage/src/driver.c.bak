@@ -17,14 +17,11 @@ SI_SBIT(SWPOS, SFR_P1, 1);
 SI_SBIT(SW, SFR_P1, 2);
 
 bool btn_plus = false;
-bool btn_mode = true;
+bool btn_mode = false;
 bool btn_minus = false;
 
 uint32_t sens_mv;
 bool sensing = false;
-
-int timCnt = 0;
-bool timeout = false;
 
 void delay(int val)
 {
@@ -34,18 +31,6 @@ void delay(int val)
           NOP();
       }
   }
-}
-
-void addTimCnt(void)
-{
-  timCnt++;
-  if (timCnt > 28038) timeout = true;
-//  if (timCnt > 1869) timeout = true;
-}
-
-bool getTimeout(void)
-{
-  return timeout;
 }
 
 void setBtnPlus(bool pressed)

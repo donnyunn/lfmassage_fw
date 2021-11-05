@@ -67,8 +67,11 @@ SI_INTERRUPT (ADC0EOC_ISR, ADC0EOC_IRQn)
 //-----------------------------------------------------------------------------
 SI_INTERRUPT (CMP0_ISR, CMP0_IRQn)
   {
+    if (CMP0CN0 & CMP0CN0_CPFIF__BMASK)
+      {
+        setBtnMode(true);
+      }
     CMP0CN0 &= ~(CMP0CN0_CPRIF__BMASK | CMP0CN0_CPFIF__BMASK);
-    setBtnMode(true);
   }
 
 //-----------------------------------------------------------------------------
@@ -111,5 +114,19 @@ SI_INTERRUPT (TIMER3_ISR, TIMER3_IRQn)
     TMR3CN0 &= ~(TMR3CN0_TF3H__BMASK | TMR3CN0_TF3LEN__BMASK);
 
     toggleBuzz();
+  }
+
+//-----------------------------------------------------------------------------
+// TIMER1_ISR
+//-----------------------------------------------------------------------------
+//
+// TIMER1 ISR Content goes here. Remember to clear flag bits:
+// TCON::TF1 (Timer 1 Overflow Flag)
+//
+//-----------------------------------------------------------------------------
+SI_INTERRUPT (TIMER1_ISR, TIMER1_IRQn)
+  {
+    TCON_TF1 = 0;
+    addTimCnt();
   }
 

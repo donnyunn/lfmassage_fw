@@ -8,6 +8,8 @@
 #ifndef INC_DRIVER_H_
 #define INC_DRIVER_H_
 
+void addTimCnt(void);
+bool getTimeout(void);
 void setBtnPlus(bool pressed);
 void setBtnMode(bool pressed);
 void setBtnMinus(bool pressed);

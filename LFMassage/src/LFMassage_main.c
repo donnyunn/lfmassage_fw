@@ -46,6 +46,7 @@ typedef enum {
 mode_t mode = MODE_READY;
 magnitude_t mag = MAG_0;
 static uint32_t chrg_ref_mV = 100;
+static uint32_t chrg_ref_cnt = 10;
 int exeCnt = 0;
 int btnCnt = 0;
 
@@ -83,6 +84,7 @@ int main (void)
 
   initialize();
   IE_EA = 1;
+  TCON_TR1 = 1;
 
   while (1) 
   {
@@ -102,6 +104,20 @@ int main (void)
         case MODE_BLU:
           work_blu();
           break;
+      }
+
+      /* Timer Event */
+      if (getTimeout()) {
+          setLedRed(false);
+          setLedGrn(false);
+          setLedBlu(false);
+          setIrLed(false);
+
+          beep();
+          beep();
+          beep();
+
+          enter_lowpower();
       }
 
       /* Button Event */
@@ -152,12 +168,12 @@ int main (void)
               beep();
           }
           switch (mag) {
-            case MAG_0: chrg_ref_mV = 0; break;
-            case MAG_1: chrg_ref_mV = 100; break;
-            case MAG_2: chrg_ref_mV = 200; break;
-            case MAG_3: chrg_ref_mV = 400; break;
-            case MAG_4: chrg_ref_mV = 800; break;
-            case MAG_5: chrg_ref_mV = 1600; break;
+            case MAG_0: chrg_ref_cnt = 0; break;
+            case MAG_1: chrg_ref_cnt = 10; break;
+            case MAG_2: chrg_ref_cnt = 20; break;
+            case MAG_3: chrg_ref_cnt = 40; break;
+            case MAG_4: chrg_ref_cnt = 80; break;
+            case MAG_5: chrg_ref_cnt = 160; break;
           }
       } else if (getBtnMinus()) {
           setBtnMinus(false);
@@ -166,12 +182,12 @@ int main (void)
               beep();
           }
           switch (mag) {
-            case MAG_0: chrg_ref_mV = 0; break;
-            case MAG_1: chrg_ref_mV = 100; break;
-            case MAG_2: chrg_ref_mV = 200; break;
-            case MAG_3: chrg_ref_mV = 400; break;
-            case MAG_4: chrg_ref_mV = 800; break;
-            case MAG_5: chrg_ref_mV = 1600; break;
+            case MAG_0: chrg_ref_cnt = 0; break;
+            case MAG_1: chrg_ref_cnt = 10; break;
+            case MAG_2: chrg_ref_cnt = 20; break;
+            case MAG_3: chrg_ref_cnt = 40; break;
+            case MAG_4: chrg_ref_cnt = 80; break;
+            case MAG_5: chrg_ref_cnt = 160; break;
           }
       }
 
@@ -206,11 +222,11 @@ void enter_lowpower(void)
 
 void work_red(void)
 {
-  if (exeCnt < 45) {
+  if (exeCnt < chrg_ref_cnt) {
       if (mag != MAG_0) {
           driver_make_shock(10, chrg_ref_mV);
       }
-  } else if (exeCnt < 50) {
+  } else if (exeCnt < chrg_ref_cnt+5) {
       Timer0_Delay(500);
   } else {
       exeCnt = 0;
@@ -220,9 +236,9 @@ void work_red(void)
 
 void work_grn(void)
 {
-  if (exeCnt < 45) {
+  if (exeCnt < chrg_ref_cnt) {
       driver_make_shock(100,chrg_ref_mV);
-  } else if (exeCnt < 50) {
+  } else if (exeCnt < chrg_ref_cnt+5) {
       Timer0_Delay(500);
   } else {
       exeCnt = 0;
@@ -232,9 +248,9 @@ void work_grn(void)
 
 void work_blu(void)
 {
-  if (exeCnt < 45) {
-        driver_make_shock(200,chrg_ref_mV);
-    } else if (exeCnt < 50) {
+  if (exeCnt < chrg_ref_cnt) {
+        driver_make_shock(500,chrg_ref_mV);
+    } else if (exeCnt < chrg_ref_cnt+5) {
         Timer0_Delay(500);
     } else {
         exeCnt = 0;
@@ -252,22 +268,42 @@ void beep(void)
 
 void check_LongPush(void)
 {
+  int i;
   if ((CMP0CN0 & CMP0CN0_CPOUT__POS_GREATER_THAN_NEG) != 0) {
-      if (++btnCnt > 50) {
-          setLedRed(false);
-          setLedGrn(false);
-          setLedBlu(false);
-          setIrLed(false);
-
-          beep();
-          beep();
-          beep();
-
-          enter_lowpower();
+      for (i = 0; i < 10; i++) {
+          Timer0_Delay(100);
+          if ((CMP0CN0 & CMP0CN0_CPOUT__POS_GREATER_THAN_NEG) == 0) {
+              btnCnt = 0;
+              return;
+          }
       }
-  } else {
-      btnCnt = 0;
+
+      setLedRed(false);
+      setLedGrn(false);
+      setLedBlu(false);
+      setIrLed(false);
+
+      beep();
+      beep();
+      beep();
+
+      enter_lowpower();
   }
+//      if (++btnCnt > 30) {
+//          setLedRed(false);
+//          setLedGrn(false);
+//          setLedBlu(false);
+//          setIrLed(false);
+//
+//          beep();
+//          beep();
+//          beep();
+//
+//          enter_lowpower();
+//      }
+//  } else {
+//      btnCnt = 0;
+//  }
 }
 
 void Timer0_Delay (uint16_t ms)
